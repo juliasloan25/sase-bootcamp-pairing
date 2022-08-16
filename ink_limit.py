@@ -33,26 +33,34 @@ def limit_image(img_arr, ink_limit):
 
 # Limit ink for an individual point
 def limit_point(point, ink_limit):
-    cmy_range = range(3)
-    percent_point = map(convert_to_percent, point)
+    cmy_range = [0,1,2]
+    percent_point = map_np(convert_to_percent, point, np.float32)
 
     # If ink limit is not exceeded, just return
     if sum(percent_point) <= ink_limit:
         return point
 
     # First combine CMY values into black
-    min_cmy = min(percent_point[cmy_range])
+    min_cmy = min(percent_point[0:3])
 
     for i in cmy_range:
         percent_point[i] -= min_cmy
-    percent_point[3] += min_cmy
+    percent_point[3] = min(100, percent_point[3]+min_cmy)
 
     # If ink limit is not exceeded, return modified point
     if sum(percent_point) <= ink_limit:
-        return convert_from_percent(percent_point)
+        return map_np(convert_from_percent, percent_point, np.uint8)
 
-    # TODO finish limiting
+    else:
+        extra_ink = ink_limit/sum(percent_point)
+        for i in range(4):
+            percent_point[i] *= extra_ink
 
+        return map_np(convert_from_percent, percent_point, np.uint8)
+
+# Map function over all ink values of a point and return np array
+def map_np(func, point, type):
+    return np.fromiter(map(func, point),dtype=type)
 
 # Convert number in range [0, 255] to [0, 100]
 def convert_to_percent(integer):
@@ -60,7 +68,7 @@ def convert_to_percent(integer):
 
 # Convert number in range [0, 100] to [0, 255]
 def convert_from_percent(percent):
-    return int(255*percent/100)
+    return np.uint8(255*percent/100)
 
 if __name__ == "__main__":
     main()
